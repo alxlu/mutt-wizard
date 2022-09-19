@@ -1,0 +1,4 @@
+#!/bin/bash
+
+op item get "$1" --format json | jq ".fields[] | select(.purpose==\"PASSWORD\") | .value" -r
+
