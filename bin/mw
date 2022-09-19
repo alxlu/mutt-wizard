@@ -44,7 +44,7 @@ host $smtp
 port ${sport:-465}
 from $fulladdr
 user $login
-passwordeval \"pass $passprefix$fulladdr\"
+passwordeval \"pass $fulladdr\"
 auth ${auth:-on}
 tls on
 tls_trust_file	$sslcert
@@ -59,7 +59,7 @@ IMAPStore $fulladdr-remote
 Host $imap
 Port ${iport:-993}
 User $login
-PassCmd \"pass $passprefix$fulladdr\"
+PassCmd \"pass $fulladdr\"
 AuthMechs LOGIN
 SSLType ${imapssl:-IMAPS}
 CertificateFile $sslcert
@@ -88,7 +88,7 @@ tls on
 user $login
 host $imap
 delivery maildir ${XDG_DATA_HOME:-$HOME/.local/share}/mail/$fulladdr/${inbox:-INBOX}
-passwordeval pass $passprefix$fulladdr
+passwordeval pass $fulladdr
 " >> "$mpoprc" ;}
 
 prepmutt() { mkdir -p "${muttrc%/*}" "$accdir"
@@ -128,7 +128,7 @@ getprofiles() { \
 	case "$type" in
 		online) folder="imaps://$login@$imap:${iport:-993}"
 extra="set imap_user = \"$login\"
-set imap_pass = \"\`pass $passprefix$fulladdr\`\"
+set imap_pass = \"\`pass $fulladdr\`\"
 set ssl_starttls = yes
 set ssl_force_tls = yes"
 			;;
@@ -176,7 +176,7 @@ delete() { if [ -z "${fulladdr+x}" ]; then
 	sed -ibu "/\([0-9]-\)\?$fulladdr.muttrc/d" "$muttrc" 2>/dev/null; rm -f "$muttrc"bu
 	sed -ibu "/account $fulladdr$/,/^\(\s*$\|account\)/d" "$msmtprc" 2>/dev/null; rm -f "$msmtprc"bu
 	sed -ibu "/account $fulladdr$/,/^\(\s*$\|account\)/d" "$mpoprc" 2>/dev/null; rm -f "$mpoprc"bu
-	pass rm -f "$passprefix$fulladdr" >/dev/null 2>&1
+	# pass rm -f "$passprefix$fulladdr" >/dev/null 2>&1
 	[ -n "${purge+x}" ] && rm -rf "${maildir:?}/${fulladdr:?}"
 
 	for file in "$msmtprc" "$mbsyncrc" "$mpoprc"; do
@@ -203,11 +203,11 @@ askinfo() { \
 	[ -z "$passprefix" ] && passprefix=""
 	hostname="${fulladdr#*@}"
 	login="${login:-$fulladdr}"
-	if [ -n "${password+x}" ]; then
-		createpass
-	else
-		getpass
-	fi
+	# if [ -n "${password+x}" ]; then
+	# 	createpass
+	# else
+	# 	getpass
+	# fi
 }
 
 createpass() { echo "$password" > "$PASSWORD_STORE_DIR/$passprefix$fulladdr"
@@ -220,7 +220,7 @@ getpass() { while : ; do pass rm -f "$passprefix$fulladdr" >/dev/null 2>&1
 getboxes() { if [ -n "${force+x}" ] ; then
 		mailboxes="$(printf "INBOX\\nDrafts\\nJunk\\nTrash\\nSent\\nArchive")"
 	else
-		info="$(curl --location-trusted -s -m 5 --user "$login:$(pass "$passprefix$fulladdr")" --url "${protocol:-imaps}://$imap:${iport:-993}")"
+		info="$(curl --location-trusted -s -m 5 --user "$login:$(pass "$fulladdr")" --url "${protocol:-imaps}://$imap:${iport:-993}")"
 		[ -z "$info" ] && echo "Log-on not successful." && return 1
 		mailboxes="$(echo "$info" | grep -v HasChildren | sed "s/.*\" //;s/\"//g" | tr -d '\r')"
 	fi
@@ -362,7 +362,7 @@ esac done
 
 case "$action" in
 	list) list ;;
-	add) checkbasics && askinfo && getboxes && getprofiles && finalize ;;
+	add) askinfo && getboxes && getprofiles && finalize ;;
 	delete) delete ;;
 	sync) mailsync $fulladdr ;;
 	toggle) togglecron ;;
